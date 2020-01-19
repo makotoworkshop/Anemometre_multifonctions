@@ -20,6 +20,7 @@
 // MiniC : pour régler le courant minimum mesuré en dessous duquel la valeur est forcée à 0, pour prendre
 // en compte le fait que la mesure du zero ne tombe jamais pile.
 
+#include <Arduino_CRC32.h>  // Librairie à ajouter via le gestionnaire de lib de l'appli arduino
 #include <LiquidCrystal.h>  // lib LCD
 #include <SoftwareSerial.h> // lib Transmission série
 
@@ -35,8 +36,11 @@ float Voltage=12;
 float MiniC=0.08;           // courant minimum mesuré en dessous duquel la valeur est forcée à 0.
 float tension_batterie_float;
 float Courant_float;
-int VitesseVent;
-int rpmEolienne;
+//int VitesseVent;
+//int rpmEolienne;
+String chaineCRC32;
+const char char_SPACE = 32; // charactère ESPACE ascii, le meilleur caractère pour la détection de string de sscanf !
+Arduino_CRC32 crc32;
 
 //——— Écran LCD ———//
 const int rs = 12, en = 11, d4 = 5, d5 = 4, d6 = 3, d7 = 2; // Déclaration LCD
@@ -137,7 +141,7 @@ void setup() {
 //  pinMode(ATpin, OUTPUT);
 //  digitalWrite(ATpin, LOW);   // HC-12 en mode commande AT
 //  delay(500);
-//  HC12.print("AT+C056");      // passer sur le canal 056 (433.4Mhz + 56x400KHz)
+//  HC12.print("AT+C010");      // passer sur le canal 056 (433.4Mhz + 56x400KHz)
 //  delay(500);
 //  digitalWrite(ATpin, HIGH);  // HC-12 en normal mode
 
@@ -175,34 +179,39 @@ void Reception() {
   while (HC12.available()) {        // If HC-12 has data
     acquis_data = HC12.read();
     chaine = chaine + acquis_data;
-//    Serial.println (chaine);      // Attention, chaine est donc une String
+    Serial.println (chaine);      // Attention, chaine est donc une String
 
 /* message reçu de la forme 
-5 KMH / 60 RPM / 11.435 VOL / -11.371 AMP
+33/54/12.665/0.045;
 pour chaque ligne on fait :*/
     if (acquis_data == 10) {      //détection de fin de ligne : méthodes ascii meilleure !
 //    if (chaine.endsWith("\n")) {      //détection de fin de ligne : méthodes String
 //      Serial.println ("fin de ligne");            // debug
-//      String phrase = "12.665 VOL / 0.045 AMP";   //debug
-      char Ventchar[5];
-      char Eolchar[5];
-      char tension_batterie[7];   // chaine de 6 caractères pour stocker le texte avant le mot VOL
-      char Courant[3];            // chaine de 4 caractères pour stocker le texte avant le mot AMP
-// scanf tout en char, puis conversion float :
-//      sscanf(chaine.c_str(), "%s KMH / %s RPM / %s VOL / %s AMP", Ventchar, Eolchar, tension_batterie, Courant);  // la chaine à parser est dans une String, avec la méthode c_str()
-//      VitesseVent_float = atof(Ventchar),0;               // char convertie en Float, avec 0 décimales
-//      rpmEolienne_float = atof(Eolchar),0;                // char convertie en Float, avec 0 décimales
-//      tension_batterie_float = atof(tension_batterie),3;  // char convertie en Float, avec 3 décimales
-//      Courant_float = atof(Courant),2;                    // char convertie en Float, avec 2 décimales
-//      Serial.print("VENT:");
-//      Serial.println(VitesseVent_float,0);
-//      Serial.print("EOLIENNE:");
-//      Serial.println(rpmEolienne_float,0);
 
-// scanf avec int et char, puis conversion float pour les valeurs en char :
-      sscanf(chaine.c_str(), "%d KMH / %d RPM / %s VOL / %s AMP", &VitesseVent, &rpmEolienne, tension_batterie, Courant);  // la chaine à parser est dans une String, avec la méthode c_str()
+      char tension_batterie[7];   // chaine de 6 caractères pour stocker le texte avant le mot VOL
+      char Courant[8];            // chaine de 4 caractères pour stocker le texte avant le mot AMP
+      char Checksum[9];
+      char VitesseVent[4];
+      char rpmEolienne[4];
+
+//  http://docs.roxen.com/pike/7.0/tutorial/strings/sscanf.xml
+ sscanf(chaine.c_str(), "%s %s %s %s %s", VitesseVent, rpmEolienne, tension_batterie, Courant, Checksum);  // la chaine à parser est dans une String, avec la méthode c_str()
+
       tension_batterie_float = atof(tension_batterie),3;  // char convertie en Float, avec 3 décimales
       Courant_float = atof(Courant),2;                    // char convertie en Float, avec 2 décimales
+
+// Reconstruction de la chaine
+      chaineCRC32 = String(VitesseVent) + char_SPACE + String(rpmEolienne) + char_SPACE + String(atof(tension_batterie),3) + char_SPACE + String(atof(Courant),3);
+      Serial.println ( "chaineCRC32 :" +chaineCRC32 );
+
+// Calcul du Checksum
+      unsigned long const start = millis();
+      for(unsigned long now = millis(); !Serial && ((now - start) < 5000); now = millis()) { };
+      uint32_t const crc32_res = crc32.calc((uint8_t const *)chaineCRC32.c_str(), strlen(chaineCRC32.c_str()));
+      Serial.print("CRC32 = 0x");
+      Serial.println(crc32_res, HEX);
+
+// Affichage contrôle   
       Serial.print("VENT:");
       Serial.println(VitesseVent);
       Serial.print("EOLIENNE:");
@@ -211,9 +220,12 @@ pour chaque ligne on fait :*/
       Serial.print("VOLTS: ");
       Serial.println(tension_batterie_float,3); // float avec 3 décimales
       Serial.print("AMPERES: ");
-      Serial.println(Courant_float,2);
-      Serial.print("Watt: ");
-      Serial.println(Courant_float*Voltage,0); // float avec 0 décimales
+      Serial.println(Courant_float,3);
+
+      Serial.print("Checksum: ");
+      Serial.println(Checksum);
+//      Serial.print("Watt: ");
+//      Serial.println(Courant_float*Voltage,0); // float avec 0 décimales
       Serial.println(' ');
       
 // Affichage LCD courant et Puissance
