@@ -24,16 +24,8 @@ unsigned long vitVentCourante = 0;
 unsigned long vitVentDernierChangement = 0;  
 float intervalleKMH = 0;
 float intervalleRPM = 0;
-const char char_STX = 2;  // début de texte en ascii
-const char char_ETX = 3;  // fin de texte en ascii
-const char char_semicolon = 59; // charactère ; en ascii
 const char char_LF = 10; // charactère saut de ligne ascii
-const char char_SLASH = 47; // charactère SLASH ascii
 const char char_SPACE = 32; // charactère ESPACE ascii, le meilleur caractère pour la détection de string de sscanf !
-char MessageVent[] = " KMH / "; // message to be sent; '\n' is a forced terminator char
-char MessageEol[] = " RPM / "; // message to be sent; '\n' is a forced terminator char
-char separateur[] = "/";
-char lf[] = "\n";
 String chaine;
 String message;
 int rotaAnemo = 0;
@@ -93,14 +85,8 @@ void loop() {
 //  }
   RemiseZeroVitVentKMHnew2 ();
   RemiseZeroVitEolRPMnew2 ();
-  
-//  chaine = String(vitVentKMH) + MessageVent + String(vitEolRPM) + MessageEol + String(tension_batterie,3) + MessageTensionBatterie + String(Current,3) + MessageCourant;  // construction du message
-//  Serial.println ( "chaine String : " +chaine );
-//  // Message de la forme suivante : 33 KMH / 54 RPM / 12.665 VOL / 0.045 AMP
 
 // Construction de la chaine
-//  chaine = String(vitVentKMH) + separateur + String(vitEolRPM) + separateur + String(tension_batterie,3) + separateur + String(Current,3) + char_semicolon + char_LF;  // construction du message
-// chaine = String(vitVentKMH) + char_SLASH + String(vitEolRPM) + char_SLASH + String(tension_batterie,3) + char_SLASH + String(Current,3);  // construction du message
   chaine =  String(vitVentKMH)+ char_SPACE + String(vitEolRPM) + char_SPACE + String(tension_batterie,3) + char_SPACE + String(Current,3);  // construction du message
   Serial.println ( "chaine String :" +chaine );
   // Message de la forme suivante : 49 338 11.405 -12.500
