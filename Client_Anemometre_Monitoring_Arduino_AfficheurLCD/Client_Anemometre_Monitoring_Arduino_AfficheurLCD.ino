@@ -38,7 +38,7 @@ float tension_batterie_float;
 float Courant_float;
 //int VitesseVent;
 //int rpmEolienne;
-String chaineCRC32;
+String chaineCONTROLE;
 const char char_SPACE = 32; // charactère ESPACE ascii, le meilleur caractère pour la détection de string de sscanf !
 Arduino_CRC32 crc32;
 
@@ -182,7 +182,7 @@ void Reception() {
     Serial.println (chaine);      // Attention, chaine est donc une String
 
 /* message reçu de la forme 
-33/54/12.665/0.045;
+49 338 11.405 -12.500 3cfe1c9
 pour chaque ligne on fait :*/
     if (acquis_data == 10) {      //détection de fin de ligne : méthodes ascii meilleure !
 //    if (chaine.endsWith("\n")) {      //détection de fin de ligne : méthodes String
@@ -190,64 +190,72 @@ pour chaque ligne on fait :*/
 
       char tension_batterie[7];   // chaine de 6 caractères pour stocker le texte avant le mot VOL
       char Courant[8];            // chaine de 4 caractères pour stocker le texte avant le mot AMP
-      char Checksum[9];
+      char ChecksumReceived[9];
       char VitesseVent[4];
       char rpmEolienne[4];
 
-//  http://docs.roxen.com/pike/7.0/tutorial/strings/sscanf.xml
- sscanf(chaine.c_str(), "%s %s %s %s %s", VitesseVent, rpmEolienne, tension_batterie, Courant, Checksum);  // la chaine à parser est dans une String, avec la méthode c_str()
-
-      tension_batterie_float = atof(tension_batterie),3;  // char convertie en Float, avec 3 décimales
-      Courant_float = atof(Courant),2;                    // char convertie en Float, avec 2 décimales
+// Extraction des données provenant du message  (http://docs.roxen.com/pike/7.0/tutorial/strings/sscanf.xml)
+      sscanf(chaine.c_str(), "%s %s %s %s %s", VitesseVent, rpmEolienne, tension_batterie, Courant, ChecksumReceived);  // la chaine à parser est dans une String, avec la méthode c_str()
 
 // Reconstruction de la chaine
-      chaineCRC32 = String(VitesseVent) + char_SPACE + String(rpmEolienne) + char_SPACE + String(atof(tension_batterie),3) + char_SPACE + String(atof(Courant),3);
-      Serial.println ( "chaineCRC32 :" +chaineCRC32 );
+      chaineCONTROLE = String(VitesseVent) + char_SPACE + String(rpmEolienne) + char_SPACE + String(atof(tension_batterie),3) + char_SPACE + String(atof(Courant),3);
+      Serial.println ( "chaineCONTROLE :" +chaineCONTROLE );
 
 // Calcul du Checksum
       unsigned long const start = millis();
       for(unsigned long now = millis(); !Serial && ((now - start) < 5000); now = millis()) { };
-      uint32_t const crc32_res = crc32.calc((uint8_t const *)chaineCRC32.c_str(), strlen(chaineCRC32.c_str()));
-      Serial.print("CRC32 = 0x");
-      Serial.println(crc32_res, HEX);
+      uint32_t const ChecksumCalcul = crc32.calc((uint8_t const *)chaineCONTROLE.c_str(), strlen(chaineCONTROLE.c_str()));
+      Serial.print("Checksum Calculé = 0x");
+      Serial.println(ChecksumCalcul, HEX);
 
-// Affichage contrôle   
-      Serial.print("VENT:");
-      Serial.println(VitesseVent);
-      Serial.print("EOLIENNE:");
-      Serial.println(rpmEolienne);
+// Comparaison du Checksum calculé au Checksum reçu
+      if (String(ChecksumCalcul, HEX) == ChecksumReceived){
 
-      Serial.print("VOLTS: ");
-      Serial.println(tension_batterie_float,3); // float avec 3 décimales
-      Serial.print("AMPERES: ");
-      Serial.println(Courant_float,3);
-
-      Serial.print("Checksum: ");
-      Serial.println(Checksum);
-//      Serial.print("Watt: ");
-//      Serial.println(Courant_float*Voltage,0); // float avec 0 décimales
-      Serial.println(' ');
-      
-// Affichage LCD courant et Puissance
-      if ( Courant_float < MiniC ){   // remise à zero forcée si valeur mesurée très petite
-        Courant_float = 0;
+        tension_batterie_float = atof(tension_batterie),3;  // char convertie en Float, avec 3 décimales
+        Courant_float = atof(Courant),2;                    // char convertie en Float, avec 2 décimales
+  
+  // Affichage de contrôle   
+        Serial.print("VENT:");
+        Serial.println(VitesseVent);
+        Serial.print("EOLIENNE:");
+        Serial.println(rpmEolienne);
+  
+        Serial.print("VOLTS: ");
+        Serial.println(tension_batterie_float,3); // float avec 3 décimales
+        Serial.print("AMPERES: ");
+        Serial.println(Courant_float,3);
+  
+        Serial.print("Checksum reçu: ");
+        Serial.println(ChecksumReceived);
+  //      Serial.print("Watt: ");
+  //      Serial.println(Courant_float*Voltage,0); // float avec 0 décimales
+        Serial.println(' ');
+        
+  // Affichage LCD courant et Puissance
+        if ( Courant_float < MiniC ){   // remise à zero forcée si valeur mesurée très petite
+          Courant_float = 0;
+        }
+        lcd.setCursor(0,0);
+        lcd.print ("Power:"); 
+        lcd.print (Courant_float,2);    // float avec 2 décimales
+        lcd.print ("A ");               // unité et espace
+        lcd.setCursor(12,0);
+        lcd.write(0b01111110);          // caractère : fleche, depuis le Standard Character Pattern du LCD
+        lcd.print (" ");
+        lcd.print (Courant_float*Voltage,0);
+        lcd.print ("Watt ");   
+  
+  // Affichage LCD Batterie
+        lcd.setCursor(0,1);
+        lcd.print ("Batt:"); 
+        lcd.print (tension_batterie_float,3); 
+        lcd.print ("V ");
       }
-      lcd.setCursor(0,0);
-      lcd.print ("Power:"); 
-      lcd.print (Courant_float,2);    // float avec 2 décimales
-      lcd.print ("A ");               // unité et espace
-      lcd.setCursor(12,0);
-      lcd.write(0b01111110);          // caractère : fleche, depuis le Standard Character Pattern du LCD
-      lcd.print (" ");
-      lcd.print (Courant_float*Voltage,0);
-      lcd.print ("Watt ");   
-
-// Affichage LCD Batterie
-      lcd.setCursor(0,1);
-      lcd.print ("Batt:"); 
-      lcd.print (tension_batterie_float,3); 
-      lcd.print ("V ");
-
+      
+      else {
+        Serial.print("ERREUR durant la réception");
+      }
+      
       chaine = "";    // vide la String chaine
     }
   }
