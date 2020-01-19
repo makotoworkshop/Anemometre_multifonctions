@@ -3,7 +3,8 @@ IN : capteur à effet Hall Anémomètre est connecté à la pin 2 = int0
 IN : capteur à effet Hall Éolienne est connecté à la pin 3 = int1  
 OUT : HC-12 Radio Default Mode 9600bps
 */
-    
+
+#include <Arduino_CRC32.h>  // Librairie à ajouter via le gestionnaire de lib de l'appli arduino
 #include <SoftwareSerial.h>
 #include <avr/sleep.h>
 /****************/
@@ -23,9 +24,18 @@ unsigned long vitVentCourante = 0;
 unsigned long vitVentDernierChangement = 0;  
 float intervalleKMH = 0;
 float intervalleRPM = 0;
+const char char_STX = 2;  // début de texte en ascii
+const char char_ETX = 3;  // fin de texte en ascii
+const char char_semicolon = 59; // charactère ; en ascii
+const char char_LF = 10; // charactère saut de ligne ascii
+const char char_SLASH = 47; // charactère SLASH ascii
+const char char_SPACE = 32; // charactère ESPACE ascii, le meilleur caractère pour la détection de string de sscanf !
 char MessageVent[] = " KMH / "; // message to be sent; '\n' is a forced terminator char
 char MessageEol[] = " RPM / "; // message to be sent; '\n' is a forced terminator char
+char separateur[] = "/";
+char lf[] = "\n";
 String chaine;
+String message;
 int rotaAnemo = 0;
 int rotaEol = 0;
 #define ATpin 7 // used to switch HC-12 to AT mode
@@ -44,8 +54,8 @@ int PIN_ACS712 = A1;
 double Voltage = 0;
 double Current = 0;
 char MessageTensionBatterie[] = " VOL / "; // message to be sent; '\n' is a forced terminator char
-char MessageCourant[] = " AMP\n"; // message to be sent; '\n' is a forced terminator char
-
+char MessageCourant[] = " AMP"; // message to be sent; '\n' is a forced terminator char
+Arduino_CRC32 crc32;
 
 /*********/
 /* SETUP */
@@ -84,13 +94,33 @@ void loop() {
   RemiseZeroVitVentKMHnew2 ();
   RemiseZeroVitEolRPMnew2 ();
   
-  chaine = String(vitVentKMH) + MessageVent + String(vitEolRPM) + MessageEol + String(tension_batterie,3) + MessageTensionBatterie + String(Current,3) + MessageCourant;  // construction du message
-  Serial.println ( "chaine String : " +chaine );
-  // Message de la forme suivante : 33 KMH / 54 RPM / 12.665 VOL / 0.045 AMP
+//  chaine = String(vitVentKMH) + MessageVent + String(vitEolRPM) + MessageEol + String(tension_batterie,3) + MessageTensionBatterie + String(Current,3) + MessageCourant;  // construction du message
+//  Serial.println ( "chaine String : " +chaine );
+//  // Message de la forme suivante : 33 KMH / 54 RPM / 12.665 VOL / 0.045 AMP
 
-  HC12.print(chaine); // send radio data
- // Serial.println ( rpmVent ); // affiche les rpm  
+// Construction de la chaine
+//  chaine = String(vitVentKMH) + separateur + String(vitEolRPM) + separateur + String(tension_batterie,3) + separateur + String(Current,3) + char_semicolon + char_LF;  // construction du message
+// chaine = String(vitVentKMH) + char_SLASH + String(vitEolRPM) + char_SLASH + String(tension_batterie,3) + char_SLASH + String(Current,3);  // construction du message
+  chaine =  String(vitVentKMH)+ char_SPACE + String(vitEolRPM) + char_SPACE + String(tension_batterie,3) + char_SPACE + String(Current,3);  // construction du message
+  Serial.println ( "chaine String :" +chaine );
+  // Message de la forme suivante : 33/54/12.665/0.045;
 
+// Calcul du Checksum
+  unsigned long const start = millis();
+  for(unsigned long now = millis(); !Serial && ((now - start) < 5000); now = millis()) { };
+  uint32_t const crc32_res = crc32.calc((uint8_t const *)chaine.c_str(), strlen(chaine.c_str()));
+  Serial.print("CRC32 = 0x");
+  Serial.println(crc32_res, HEX);
+  
+// Checksum joint au message
+  message = chaine+ char_SPACE + String(crc32_res, HEX) + char_LF;
+  Serial.println ( "message :" +message ); 
+   
+// send radio data
+//  HC12.print(chaine);
+  HC12.print(message);
+  // Message de la forme suivante : 4063697354/33/54/12.665/0.045;
+  
   delay(100);
 }
 
