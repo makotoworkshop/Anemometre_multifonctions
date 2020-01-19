@@ -103,7 +103,7 @@ void loop() {
 // chaine = String(vitVentKMH) + char_SLASH + String(vitEolRPM) + char_SLASH + String(tension_batterie,3) + char_SLASH + String(Current,3);  // construction du message
   chaine =  String(vitVentKMH)+ char_SPACE + String(vitEolRPM) + char_SPACE + String(tension_batterie,3) + char_SPACE + String(Current,3);  // construction du message
   Serial.println ( "chaine String :" +chaine );
-  // Message de la forme suivante : 33/54/12.665/0.045;
+  // Message de la forme suivante : 49 338 11.405 -12.500
 
 // Calcul du Checksum
   unsigned long const start = millis();
@@ -119,7 +119,7 @@ void loop() {
 // send radio data
 //  HC12.print(chaine);
   HC12.print(message);
-  // Message de la forme suivante : 4063697354/33/54/12.665/0.045;
+  // Message de la forme suivante : 49 338 11.405 -12.500 3cfe1c9
   
   delay(100);
 }
