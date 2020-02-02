@@ -32,13 +32,24 @@ SoftwareSerial HC12(8, 9);  // HC-12 TX Pin, HC-12 RX Pin
 //#define ATpin 7             // poir passer le HC-12 en AT mode
 char acquis_data;
 String chaine;
+
+int i;
+char msg[40];   // création du tableau de réception vide
 float Voltage=12;
 float MiniC=0.08;           // courant minimum mesuré en dessous duquel la valeur est forcée à 0.
+
+char VitesseVent[4];
+char rpmEolienne[4];
+char tension_batterie[8];   // Tableau de 7 caractères + null pour stocker le texte
+char Courant[8];
+char ChecksumReceived[9];
+
 float tension_batterie_float;
+
 float Courant_float;
-//int VitesseVent;
-//int rpmEolienne;
+
 String chaineCONTROLE;
+const char char_LF = 10;
 const char char_SPACE = 32; // charactère ESPACE ascii, le meilleur caractère pour la détection de string de sscanf !
 Arduino_CRC32 crc32;
 
@@ -176,87 +187,198 @@ void loop() {
 //#############
 void Reception() {
 // surtout pas de delay dans cette boucle, sinon les data reçues sont erronnées.
+//  char msg[40];   // création du tableau de réception vide
+//  char VitesseVent[10];
+  int x = 0;
   while (HC12.available()) {        // If HC-12 has data
     acquis_data = HC12.read();
-    chaine = chaine + acquis_data;
-    Serial.println (chaine);      // Attention, chaine est donc une String
+    msg[x] = {acquis_data}; // remplissage l'une après l'autre de chaque colonne du tableau, avec les valeurs qui arrivent à la suite les unes des autres, pour reformer le message
+    x++;  // incrément pour changer de colonne
+//    Serial.print("x : ");
+//    Serial.println(x);    
+//    Serial.println(msg);
 
 /* message reçu de la forme 
-49 338 11.405 -12.500 3cfe1c9
+49 33 11.405 -12.500 3cfe1c9
 pour chaque ligne on fait :*/
-    if (acquis_data == 10) {      //détection de fin de ligne : méthodes ascii meilleure !
-//    if (chaine.endsWith("\n")) {      //détection de fin de ligne : méthodes String
-//      Serial.println ("fin de ligne");            // debug
+    if (acquis_data == char_LF) {      //détection de fin de ligne : méthodes ascii meilleure !
+      Serial.print("msg :");
+      Serial.println(msg);
 
-      char tension_batterie[7];   // chaine de 6 caractères pour stocker le texte avant le mot VOL
-      char Courant[8];            // chaine de 4 caractères pour stocker le texte avant le mot AMP
-      char ChecksumReceived[9];
-      char VitesseVent[4];
-      char rpmEolienne[4];
+      int ESPACE1 = 0;
+      int ESPACE2 = 0;
+      int ESPACE3 = 0;
+      int ESPACE4 = 0;
+      int ESPACE5 = 0;
+      int index = 0;
+      int index_ESPACE = 1;
+
+      for(index = 0; (index < 40) ; index++) {
+        if (msg[index] == char_SPACE) {
+          switch(index_ESPACE) {
+            case 1:
+              ESPACE1 = index;
+              break;
+            case 2:
+              ESPACE2 = index;
+              break;
+            case 3:
+              ESPACE3 = index;
+              break;
+            case 4:
+              ESPACE4 = index;
+              break;  
+            case 5:
+              ESPACE5 = index;
+              break;          
+          }
+          index_ESPACE++;
+        } 
+      }
+
+//      Serial.print("ESPACE1 :");
+//      Serial.println(ESPACE1);
+//      Serial.print("ESPACE2 :");
+//      Serial.println(ESPACE2);
+//      Serial.print("ESPACE3 :");
+//      Serial.println(ESPACE3);
+//      Serial.print("ESPACE4 :");
+//      Serial.println(ESPACE4);     
+//      Serial.print("ESPACE5 :");
+//      Serial.println(ESPACE5);  
+
+
+// Boucle qui relit le tableau pour récupérer la vitesse du vent
+  int K=0;
+  for (i = 0; i < ESPACE1; i++) {
+    VitesseVent[K] = {msg[i]}; 
+    K++;     
+  }
+  Serial.print("VitesseVent :");
+  Serial.print(VitesseVent); 
+  Serial.println(";");
+
+
+// Boucle qui relit le tableau pour récupérer la vitesse éolienne
+  int R=0;
+  for ((i = ESPACE1+1); i < ESPACE2; i++) {
+    rpmEolienne[R] = {msg[i]}; 
+    R++;     
+  }
+  Serial.print("rpmEolienne :");
+  Serial.print(rpmEolienne); 
+  Serial.println(";");
+
+
+// Boucle qui relit le tableau pour récupérer le Voltage
+  int V=0;
+  for ((i = ESPACE2+1); i < ESPACE3; i++) {
+    tension_batterie[V] = {msg[i]}; 
+    V++;        
+  }
+  Serial.print("tension_batterie :");
+  Serial.print(tension_batterie);    
+  Serial.println(";");
+
+
+// Boucle qui relit le tableau pour récupérer le Courant
+  int A=0;
+  for ((i = ESPACE3+1); i < ESPACE4; i++) {
+    Courant[A] = {msg[i]}; 
+    A++;        
+ //       Courant_float = atof(Courant);                    // char convertie en Float, avec 2 décimales
+    //    Serial.println(Courant); 
+  }
+  Serial.print("Courant :");
+  Serial.print(Courant);    
+  Serial.println(";");
+
+
+// Boucle qui relit le tableau pour récupérer le ChecksumReceived
+  int C=0;
+  for ((i = ESPACE4+1); i < ESPACE5; i++) {
+    ChecksumReceived[C] = {msg[i]}; 
+    C++;        
+ //       Courant_float = atof(Courant);                    // char convertie en Float, avec 2 décimales
+    //    Serial.println(Courant); 
+  }
+  Serial.print("ChecksumReceived :");
+  Serial.print(ChecksumReceived);    
+  Serial.println(";");
+  Serial.println("");
+  
+
+        
 
 // Extraction des données provenant du message  (http://docs.roxen.com/pike/7.0/tutorial/strings/sscanf.xml)
-      sscanf(chaine.c_str(), "%s %s %s %s %s", VitesseVent, rpmEolienne, tension_batterie, Courant, ChecksumReceived);  // la chaine à parser est dans une String, avec la méthode c_str()
+//      sscanf(chaine.c_str(), "%s %s %s %s %s", VitesseVent, rpmEolienne, tension_batterie, Courant, ChecksumReceived);  // la chaine à parser est dans une String, avec la méthode c_str()
 
 // Reconstruction de la chaine
-      chaineCONTROLE = String(VitesseVent) + char_SPACE + String(rpmEolienne) + char_SPACE + String(atof(tension_batterie),3) + char_SPACE + String(atof(Courant),3);
-      Serial.println ( "chaineCONTROLE :" +chaineCONTROLE );
+//      chaineCONTROLE = String(VitesseVent) + char_SPACE + String(rpmEolienne) + char_SPACE + String(atof(tension_batterie),3) + char_SPACE + String(atof(Courant),3);
+//     Serial.println ( "chaineCONTROLE :" +chaineCONTROLE );
 
 // Calcul du Checksum
-      unsigned long const start = millis();
-      for(unsigned long now = millis(); !Serial && ((now - start) < 5000); now = millis()) { };
-      uint32_t const ChecksumCalcul = crc32.calc((uint8_t const *)chaineCONTROLE.c_str(), strlen(chaineCONTROLE.c_str()));
-      Serial.print("Checksum Calculé = 0x");
-      Serial.println(ChecksumCalcul, HEX);
+//      unsigned long const start = millis();
+//      for(unsigned long now = millis(); !Serial && ((now - start) < 5000); now = millis()) { };
+//      uint32_t const ChecksumCalcul = crc32.calc((uint8_t const *)chaineCONTROLE.c_str(), strlen(chaineCONTROLE.c_str()));
+//      Serial.print("Checksum Calculé = 0x");
+//      Serial.println(ChecksumCalcul, HEX);
 
 // Comparaison du Checksum calculé au Checksum reçu
-      if (String(ChecksumCalcul, HEX) == ChecksumReceived){
+//      if (String(ChecksumCalcul, HEX) == ChecksumReceived){
 
-        tension_batterie_float = atof(tension_batterie),3;  // char convertie en Float, avec 3 décimales
-        Courant_float = atof(Courant),2;                    // char convertie en Float, avec 2 décimales
-  
+//        tension_batterie_float = atof(tension_batterie),3;  // char convertie en Float, avec 3 décimales
+//        Courant_float = atof(Courant),2;                    // char convertie en Float, avec 2 décimales
+//  
   // Affichage de contrôle   
-        Serial.print("VENT:");
-        Serial.println(VitesseVent);
-        Serial.print("EOLIENNE:");
-        Serial.println(rpmEolienne);
-  
-        Serial.print("VOLTS: ");
-        Serial.println(tension_batterie_float,3); // float avec 3 décimales
-        Serial.print("AMPERES: ");
-        Serial.println(Courant_float,3);
-  
-        Serial.print("Checksum reçu: ");
-        Serial.println(ChecksumReceived);
-  //      Serial.print("Watt: ");
-  //      Serial.println(Courant_float*Voltage,0); // float avec 0 décimales
-        Serial.println(' ');
+//        Serial.print("VENT:");
+//        Serial.println(VitesseVent);
+//        Serial.print("EOLIENNE:");
+//        Serial.println(rpmEolienne);
+//  
+//        Serial.print("VOLTS: ");
+//        Serial.println(tension_batterie_float,3); // float avec 3 décimales
+//        Serial.print("AMPERES: ");
+//        Serial.println(Courant_float,3);
+//  
+//        Serial.print("Checksum reçu: ");
+//        Serial.println(ChecksumReceived);
+//  //      Serial.print("Watt: ");
+//  //      Serial.println(Courant_float*Voltage,0); // float avec 0 décimales
+//        Serial.println(' ');
         
   // Affichage LCD courant et Puissance
-        if ( Courant_float < MiniC ){   // remise à zero forcée si valeur mesurée très petite
-          Courant_float = 0;
-        }
-        lcd.setCursor(0,0);
-        lcd.print ("Power:"); 
-        lcd.print (Courant_float,2);    // float avec 2 décimales
-        lcd.print ("A ");               // unité et espace
-        lcd.setCursor(12,0);
-        lcd.write(0b01111110);          // caractère : fleche, depuis le Standard Character Pattern du LCD
-        lcd.print (" ");
-        lcd.print (Courant_float*Voltage,0);
-        lcd.print ("Watt ");   
-  
-  // Affichage LCD Batterie
-        lcd.setCursor(0,1);
-        lcd.print ("Batt:"); 
-        lcd.print (tension_batterie_float,3); 
-        lcd.print ("V ");
-      }
+//        if ( Courant_float < MiniC ){   // remise à zero forcée si valeur mesurée très petite
+//          Courant_float = 0;
+//        }
+//        lcd.setCursor(0,0);
+//        lcd.print ("Power:"); 
+//        lcd.print (Courant_float,2);    // float avec 2 décimales
+//        lcd.print ("A ");               // unité et espace
+//        lcd.setCursor(12,0);
+//        lcd.write(0b01111110);          // caractère : fleche, depuis le Standard Character Pattern du LCD
+//        lcd.print (" ");
+//        lcd.print (Courant_float*Voltage,0);
+//        lcd.print ("Watt ");   
+//  
+//  // Affichage LCD Batterie
+//        lcd.setCursor(0,1);
+//        lcd.print ("Batt:"); 
+//        lcd.print (tension_batterie_float,3); 
+//        lcd.print ("V ");
+//      }
+//      
+//      else {
+//        Serial.print("ERREUR durant la réception");
+//      }
       
-      else {
-        Serial.print("ERREUR durant la réception");
-      }
-      
-      chaine = "";    // vide la String chaine
+        memset(VitesseVent, 0, sizeof(VitesseVent));
+        memset(rpmEolienne, 0, sizeof(rpmEolienne));
+        memset(tension_batterie, 0, sizeof(tension_batterie));
+        memset(Courant, 0, sizeof(Courant));
+        memset(ChecksumReceived, 0, sizeof(ChecksumReceived));
+        memset(msg, 0, sizeof(msg));  // vide le tableau de manière efficace, pas comme « msg[40] = ""; »
+
     }
   }
 }
