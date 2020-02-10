@@ -107,8 +107,6 @@ void setup() {
 /*************/
 void loop() {
   Reception();
-  CalculReception();
-  Afficheurs();
   delay(500);   // délai de rafraichissement des afficheurs
 
 //=== pour tests ===//
@@ -282,8 +280,8 @@ void Reception(void) {
           if ( Courant_float < MiniC ) {   // remise à zero forcée si valeur mesurée très petite
             Courant_float = 0;
           }
-
-
+          CalculReception();
+          Afficheurs();
         } 
         else {
           Serial.println("");
