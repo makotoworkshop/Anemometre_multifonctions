@@ -4,7 +4,7 @@ IN : capteur à effet Hall Éolienne est connecté à la pin 3 = int1
 OUT : HC-12 Radio Default Mode 9600bps
 */
 
-#include <Arduino_CRC32.h>  // Librairie à ajouter via le gestionnaire de lib de l'appli arduino
+#include <Arduino_CRC16.h>  // Librairie à ajouter via le gestionnaire de lib de l'appli arduino
 #include <SoftwareSerial.h>
 #include <avr/sleep.h>
 /****************/
@@ -24,6 +24,7 @@ unsigned long vitVentCourante = 0;
 unsigned long vitVentDernierChangement = 0;  
 float intervalleKMH = 0;
 float intervalleRPM = 0;
+const char char_VT = 124; // vertical tab (VT)
 const char char_LF = 10; // charactère saut de ligne ascii
 const char char_SPACE = 32; // charactère ESPACE ascii, le meilleur caractère pour la détection de string de sscanf !
 String chaine;
@@ -47,7 +48,7 @@ double Voltage = 0;
 double Current = 0;
 char MessageTensionBatterie[] = " VOL / "; // message to be sent; '\n' is a forced terminator char
 char MessageCourant[] = " AMP"; // message to be sent; '\n' is a forced terminator char
-Arduino_CRC32 crc32;
+Arduino_CRC16 crc16;
 
 /*********/
 /* SETUP */
@@ -87,19 +88,17 @@ void loop() {
   RemiseZeroVitEolRPMnew2 ();
 
 // Construction de la chaine
-  chaine =  String(vitVentKMH)+ char_SPACE + String(vitEolRPM) + char_SPACE + String(tension_batterie,3) + char_SPACE + String(Current,3);  // construction du message
+  chaine =  char_VT + String(vitVentKMH)+ char_SPACE + String(vitEolRPM) + char_SPACE + String(tension_batterie,3) + char_SPACE + String(Current,3);  // construction du message
   Serial.println ( "chaine String :" +chaine );
   // Message de la forme suivante : 49 338 11.405 -12.500
 
 // Calcul du Checksum
-  unsigned long const start = millis();
-  for(unsigned long now = millis(); !Serial && ((now - start) < 5000); now = millis()) { };
-  uint32_t const crc32_res = crc32.calc((uint8_t const *)chaine.c_str(), strlen(chaine.c_str()));
-  Serial.print("CRC32 = 0x");
-  Serial.println(crc32_res, HEX);
+  uint16_t const crc16_res = crc16.calc((uint8_t const *)chaine.c_str(), strlen(chaine.c_str()));
+  Serial.print("CRC16 = 0x");
+  Serial.println(crc16_res, HEX);
   
 // Checksum joint au message
-  message = chaine+ char_SPACE + String(crc32_res, HEX) + char_SPACE + char_LF;
+  message = chaine + char_SPACE + String(crc16_res, HEX) + char_SPACE + char_LF;
   Serial.println ( "message :" +message ); 
    
 // send radio data
