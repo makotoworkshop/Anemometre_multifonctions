@@ -30,21 +30,21 @@ Arduino_CRC16 crc16;
 
 float tension_batterie_float;
 float Courant_float;
-float VitesseVent_float;
-float rpmEolienne_float;
+int VitesseVent_int;
+int rpmEolienne_int;
 
 //——— InfluxDB ———//
-const char *INFLUXDB_HOST = "xxxxxxxx.org";
+const char *INFLUXDB_HOST = "xxxx.org";
 const uint16_t INFLUXDB_PORT = 8086;
-const char *DATABASE = "XXX";
-const char *DB_USER = "xxx";
-const char *DB_PASSWORD = "xxxxxxxxx";
+const char *DATABASE = "xxxx";
+const char *DB_USER = "xxxx";
+const char *DB_PASSWORD = "xxxx";
 Influxdb influxdb(INFLUXDB_HOST, INFLUXDB_PORT);  //https://github.com/projetsdiy/grafana-dashboard-influxdb-exp8266-ina219-solar-panel-monitoring/tree/master/solar_panel_monitoring
 int compteur = 1;
 
 //——— WiFi ———//
-char ssid[] = "AAAA";
-char password[] = "aaaaaaa";
+char ssid[] = "xxxx";
+char password[] = "xxxx";
 ESP8266WiFiMulti WiFiMulti;
 
 //#########
@@ -201,10 +201,10 @@ void Reception(void) {
         }
         
    // Conversions utiles pour la fonction SendDataToInfluxdbServer()
-          VitesseVent_float = atof(VitesseVent),0;  // char convertie en Float, avec 0 décimales
-          rpmEolienne_float = atof(rpmEolienne),0;                    // char convertie en Float, avec 0 décimales
+          VitesseVent_int = atoi(VitesseVent);  // char convertie en Float, avec 0 décimales
+          rpmEolienne_int = atoi(rpmEolienne);                    // char convertie en Float, avec 0 décimales
           tension_batterie_float = atof(tension_batterie),3;  // char convertie en Float, avec 3 décimales
-          Courant_float = atof(Courant),2;                    // char convertie en Float, avec 2 décimales 
+          Courant_float = atof(Courant),2;                    // char convertie en Float, avec 2 décimale
             
   // Reconstruction de la chaine
         chaineCONTROLE = char_VT + String(VitesseVent) + char_SPACE + String(rpmEolienne) + char_SPACE + String(tension_batterie) + char_SPACE + String(Courant);
@@ -220,9 +220,9 @@ void Reception(void) {
         
   // Affichage de contrôle  
         Serial.print("VENT :");
-        Serial.println(VitesseVent_float,0); 
+        Serial.println(VitesseVent_int); 
         Serial.print("EOLIENNE :");
-        Serial.println(rpmEolienne_float,0);
+        Serial.println(rpmEolienne_int);
         Serial.print("VOLTS: ");
         Serial.println(tension_batterie_float,3); // float avec 3 décimales
         Serial.print("AMPERES: ");
@@ -260,8 +260,8 @@ void SendDataToInfluxdbServer() { //Writing data with influxdb HTTP API: https:/
                                   //Querying Data: https://docs.influxdata.com/influxdb/v1.5/query_language/
   // Comparaison du Checksum calculé au Checksum reçu
     dbMeasurement rowDATA("Data");
-    rowDATA.addField("VitesseVent", VitesseVent_float);
-    rowDATA.addField("RotationEolienne", rpmEolienne_float);
+    rowDATA.addField("VitesseVent", VitesseVent_int);
+    rowDATA.addField("RotationEolienne", rpmEolienne_int);
     rowDATA.addField("tension_batterie", tension_batterie_float);
     rowDATA.addField("Courant", Courant_float);
     Serial.println(influxdb.write(rowDATA) == DB_SUCCESS ? " - rowDATA write success" : " - Writing failed");
