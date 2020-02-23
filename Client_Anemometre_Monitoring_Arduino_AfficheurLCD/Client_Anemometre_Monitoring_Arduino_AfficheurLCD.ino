@@ -71,6 +71,10 @@ void setup() {
   //——— LCD ———//
   lcd.begin(20,2);            // Initialise le LCD avec 20 colonnes x 2 lignes 
   delay(10);
+  lcd.print("LCD OK");        // affiche LCD OK
+  delay(2000);
+  lcd.clear();
+  delay(10);
   lcd.createChar(0, carre00); // Les 8 caractères personnalisés
   lcd.createChar(1, carre01);
   lcd.createChar(2, carre02);
@@ -79,10 +83,6 @@ void setup() {
   lcd.createChar(5, carre05);  
   lcd.createChar(6, crochetouvrant);
   lcd.createChar(7, crochetfermant);
-  lcd.print("LCD OK");        // affiche LCD OK
-  delay(2000);
-  lcd.clear();
-  delay(10);
 } 
 
 //#############
