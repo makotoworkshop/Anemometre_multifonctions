@@ -7,19 +7,19 @@ float mapfloat(float x, float in_min, float in_max, float out_min, float out_max
 
 uint8_t CalcSegment(uint8_t numSeg, int valBatt)
 {
-  uint8_t battChar = 0;
+  uint8_t calChar = 0;
   
   if(valBatt >= (5 * numSeg))
-    battChar = 5;
+    calChar = 5;
   else
   {
     if(valBatt > (5 * (numSeg -1)))
-      battChar = valBatt - (5 * (numSeg -1));
+      calChar = valBatt - (5 * (numSeg -1));
     else
-      battChar = 0;
+      calChar = 0;
   }
 
-  return battChar;
+  return calChar;
 }
 
 

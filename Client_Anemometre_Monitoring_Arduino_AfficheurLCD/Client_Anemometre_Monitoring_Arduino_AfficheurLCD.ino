@@ -281,8 +281,6 @@ void Reception(void) {
 
 
 void Jauge(void) {          // Jauge de charge batterie
-
-  uint8_t battChar[6] = {0, 0, 0, 0, 0, 0};
   uint8_t ind = 0;
  
   float NiveauBatterie = mapfloat(tension_batterie_float, 11.4, 12.73, 0, 30);  // Discrétise la valeur de la tension batterie
@@ -305,80 +303,10 @@ void Jauge(void) {          // Jauge de charge batterie
 //  Serial.print(NiveauBatterieBarre);
 //  Serial.println("  ");
  
-  // Calcul segments jauge Batterie
-  for(ind = 0; ind < 6; ind++)
-    battChar[ind] = CalcSegment((ind + 1), NiveauBatterieBarre);
- 
   // Affichage Jauge
   lcd.setCursor(12, 1);
   lcd.write(byte(6));   // crochet ouvrant
   for(ind = 0; ind < 6; ind++)
-    lcd.write(battChar[ind]); // Segment jauge Batterie 1
+    lcd.write(CalcSegment((ind + 1), NiveauBatterieBarre)); // Segment jauge Batterie 1
   lcd.write(byte(7));   // crochet fermant
-}
-
-
-
-
-
-
-void JaugeOLD(void) {          // Jauge de charge batterie
-
-  uint8_t battChar1 = 0;
-  uint8_t battChar2 = 0;
-  uint8_t battChar3 = 0;
-  uint8_t battChar4 = 0;
-  uint8_t battChar5 = 0;
-  uint8_t battChar6 = 0; 
-  
-  lcd.setCursor(12, 1);
-  lcd.write(byte(6));   // crochet ouvrant
-  lcd.setCursor(19, 1);
-  lcd.write(byte(7));   // crochet fermant
-  float NiveauBatterie = mapfloat(tension_batterie_float, 11.4, 12.73, 0, 30); // Discrétise la valeur de la tension batterie
-  uint8_t NiveauBatterieBarre = (uint8_t)NiveauBatterie;                               // conversion en entier
-
-  if (NiveauBatterie > 30) {  // en cas de dépassement des limites haute et basse et permettre l'affichage non-erroné
-    NiveauBatterieBarre = 30;
-    lcd.setCursor(13, 1);
-    lcd.print ("Pleine"); 
-    delay (1000);
-  }
-  else if (NiveauBatterie < 0) {
-    NiveauBatterieBarre = 0; 
-    lcd.setCursor(13, 1);
-    lcd.print ("Alerte"); 
-    delay (1000);
-  }
-//  Serial.print ("NiveauBatterieBarre = "); 
-//  Serial.print(NiveauBatterieBarre);
-//  Serial.println("  ");
-  
-  // Calcul segment 1 jauge Batterie
-  battChar1 = CalcSegment(1, NiveauBatterieBarre);
-
-  // Calcul segment 2 jauge Batterie
-  battChar2 = CalcSegment(2, NiveauBatterieBarre);
-
-  // Calcul segment 3 jauge Batterie
-  battChar3 = CalcSegment(3, NiveauBatterieBarre);
-
-  // Calcul segment 4 jauge Batterie
-  battChar4 = CalcSegment(4, NiveauBatterieBarre);
-
-  // Calcul segment 5 jauge Batterie
-  battChar5 = CalcSegment(5, NiveauBatterieBarre);
-
-  // Calcul segment 6 jauge Batterie
-  battChar6 = CalcSegment(6, NiveauBatterieBarre);
-  
-
-  lcd.setCursor(13, 1);
-  lcd.write(battChar1); // Segment jauge Batterie 1
-  lcd.write(battChar2); // Segment jauge Batterie 2
-  lcd.write(battChar3); // Segment jauge Batterie 3
-  lcd.write(battChar4); // Segment jauge Batterie 4
-  lcd.write(battChar5); // Segment jauge Batterie 5
-  lcd.write(battChar6); // Segment jauge Batterie 6
-
 }
