@@ -1,0 +1,7 @@
+Édit du 15 mai 2020 !
+Électro-Bidouilleur a enfin sorti une vidéo sur le module HC-12
+https://youtu.be/ArAcRfPpIYI?t=802 et nous informe que la librairie  <SoftwareSerial.h> est à éviter,
+ce que j'aurais bien voulu savoir à l'époque étant donné que j'ai effectivement rencontré des problèmes de réceptions.
+Il faut donc lui préférer la librairie <AltSoftSerial.h>.
+Je n'ai pas le temps de me pencher dessus, donc j'ai laissé tel quel le code suivant,
+à vous de changer la librairie.
